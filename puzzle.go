@@ -39,29 +39,33 @@ func isNumber(c byte) bool {
 }
 
 func asciiToNumber(c byte) (uint8, error) {
-	if c < One && c > Nine {
+	if c < One || c > Nine {
 		return uint8(c), ErrInvalidNumber
 	}
 	return uint8(c) - Zero, nil
 }
 
 func isEvenNumber(i int) bool {
-	return i*2/2 == i
+	return i%2 == 0
 
 }
 
 // Puzzle - a sudoku puzzle structure
 type Puzzle [9][9]uint8
 
+// Dump - Dump the current state of the puzzle to a writer
 func (p *Puzzle) Dump(writer io.Writer) {
 	for _, v := range p {
 		line := []byte{}
-		for _, vv := range v {
+		for i, vv := range v {
+			if i != 0 {
+				line = append(line, Space)
+			}
 			if vv == 0 {
-				line = append(line, Underscore, Space)
+				line = append(line, Underscore)
 				continue
 			}
-			line = append(line, vv+Zero, Space)
+			line = append(line, vv+Zero)
 		}
 		// write the line
 		line = append(line, Newline)
@@ -88,7 +92,7 @@ func puzzleScanSplit(data []byte, atEOF bool) (advance int, token []byte, err er
 				}
 			} else {
 				// odd, should be space
-				if !isNumber(b) && !isBlank(b) {
+				if !isSpace(b) {
 					err = ErrInvalidCharacter
 					return
 				}
@@ -137,6 +141,12 @@ func ParsePuzzle(reader io.Reader) (Puzzle, error) {
 	if err := scanner.Err(); err != nil {
 		// if there are errors, return the errors
 		return p, err
+	}
+
+	if rowCount < 8 {
+		// we have exceeded the allowable number of rows, report invalid
+		// row count
+		return p, ErrInvalidRowCount
 	}
 
 	return p, nil
