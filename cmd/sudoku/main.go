@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -12,10 +11,14 @@ func main() {
 	// take stdin and make a Puzzle
 	p, err := sudoku.ParsePuzzle(os.Stdin)
 	if err != nil {
+		// bad input
 		log.Fatalf("Invalid Puzzle: %s", err.Error())
 	}
-	p.Dump(os.Stdout)
-	p.BacktrackSolve()
-	fmt.Println("\n\nfinal result:")
+	// attempt to solve the puzzle
+	if err := p.BacktrackSolve(); err != nil {
+		// couldn't solve the puzzle
+		log.Fatalf("Error solving Puzzle: %s", err.Error())
+	}
+	// dump out the solution to stdout
 	p.Dump(os.Stdout)
 }

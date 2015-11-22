@@ -19,7 +19,6 @@ const (
 6 7 8 9 1 2 3 4 5
 9 1 2 3 4 5 6 7 8
 `
-
 	goodPuzzle string = `1 _ 3 _ _ 6 _ 8 _
 _ 5 _ _ 8 _ 1 2 _
 7 _ 9 1 _ 3 _ 5 6
@@ -132,8 +131,14 @@ func BenchmarkParsePuzzle(b *testing.B) {
 }
 
 func BenchmarkSolvePuzzle(b *testing.B) {
-	p, _ := sudoku.ParsePuzzle(strings.NewReader(goodPuzzle))
+	p, err := sudoku.ParsePuzzle(strings.NewReader(goodPuzzle))
+	if err != nil {
+		b.Error(err.Error())
+	}
 	for i := 0; i < b.N; i++ {
-		p.BacktrackSolve()
+		var testPuzzle sudoku.Puzzle = p
+		if err := testPuzzle.BacktrackSolve(); err != nil {
+			b.Error(err.Error())
+		}
 	}
 }

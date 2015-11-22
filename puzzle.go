@@ -2,55 +2,8 @@ package sudoku
 
 import (
 	"bufio"
-	"errors"
 	"io"
 )
-
-const (
-	Underscore        byte = 0x5f
-	Space                  = 0x20
-	Zero                   = 0x30
-	One                    = 0x31
-	Nine                   = 0x39
-	Newline                = 0x0a
-	MaxInputRowLength int  = 17
-)
-
-var (
-	ErrInvalidNumber     = errors.New("invalid number")
-	ErrInvalidCharacter  = errors.New("invalid character")
-	ErrInvalidLineLength = errors.New("invalid line length")
-	ErrInvalidRowCount   = errors.New("invalid number of rows")
-	ErrStuck             = errors.New("stuck in backtrack")
-	ErrNoSolution        = errors.New("no solution")
-)
-
-func isSpace(c byte) bool {
-	return c == Space
-}
-func isBlank(c byte) bool {
-	return c == Underscore
-}
-
-func isNumber(c byte) bool {
-	if _, err := asciiToNumber(c); err != nil {
-		return false
-	}
-	return true
-
-}
-
-func asciiToNumber(c byte) (uint8, error) {
-	if c < One || c > Nine {
-		return uint8(c), ErrInvalidNumber
-	}
-	return uint8(c) - Zero, nil
-}
-
-func isEvenNumber(i int) bool {
-	return i%2 == 0
-
-}
 
 // Puzzle - a sudoku puzzle structure
 type Puzzle [9][9]uint8
@@ -61,47 +14,18 @@ func (p *Puzzle) Dump(writer io.Writer) {
 		line := []byte{}
 		for i, vv := range v {
 			if i != 0 {
-				line = append(line, Space)
+				line = append(line, space)
 			}
 			if vv == 0 {
-				line = append(line, Underscore)
+				line = append(line, underscore)
 				continue
 			}
-			line = append(line, vv+Zero)
+			line = append(line, vv+zero)
 		}
 		// write the line
-		line = append(line, Newline)
+		line = append(line, newline)
 		writer.Write(line)
 	}
-}
-
-func puzzleScanSplit(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	advance, token, err = bufio.ScanLines(data, atEOF)
-	if err == nil && token != nil {
-		if len(token) != MaxInputRowLength {
-			// line length is incorrect, error
-			err = ErrInvalidLineLength
-			return
-		}
-		// check that each line is correct format
-		for i, b := range token {
-			if isEvenNumber(i) {
-				// even, should be either a Number or Blank
-				if !isNumber(b) && !isBlank(b) {
-					//error
-					err = ErrInvalidCharacter
-					return
-				}
-			} else {
-				// odd, should be space
-				if !isSpace(b) {
-					err = ErrInvalidCharacter
-					return
-				}
-			}
-		}
-	}
-	return
 }
 
 // ParsePuzzle - take an io.Reader and deserialize into a Puzzle
@@ -118,7 +42,7 @@ func ParsePuzzle(reader io.Reader) (Puzzle, error) {
 		if rowCount > 8 {
 			// we have exceeded the allowable number of rows, report invalid
 			// row count
-			return p, ErrInvalidRowCount
+			return p, ErrParseInvalidRowCount
 		}
 		// grab the token bytes
 		token := scanner.Bytes()
@@ -128,7 +52,7 @@ func ParsePuzzle(reader io.Reader) (Puzzle, error) {
 			// of the puzzle input, we will skip to every other
 			// value from the line
 			var value uint8 = 0
-			if token[i] != Underscore {
+			if token[i] != underscore {
 				// if the value is not an underscore, set to
 				// the number value of the ascii token
 				value, _ = asciiToNumber(token[i])
@@ -148,18 +72,14 @@ func ParsePuzzle(reader io.Reader) (Puzzle, error) {
 	if rowCount < 8 {
 		// we have exceeded the allowable number of rows, report invalid
 		// row count
-		return p, ErrInvalidRowCount
+		return p, ErrParseInvalidRowCount
 	}
 
 	return p, nil
 }
 
-var (
-	stuck          = false
-	recursionDepth = 30
-)
-
-func (p *Puzzle) checkrow(i, j int, k uint8) bool {
+// checkRow - Check that k isnt duplicated in the row i
+func (p *Puzzle) checkRow(i int, k uint8) bool {
 	for x := 0; x < 9; x++ {
 		if p[i][x] == k {
 			return false
@@ -167,7 +87,9 @@ func (p *Puzzle) checkrow(i, j int, k uint8) bool {
 	}
 	return true
 }
-func (p *Puzzle) checkcol(i, j int, k uint8) bool {
+
+// checkCol - Check that k isnt duplicated in the column j
+func (p *Puzzle) checkCol(j int, k uint8) bool {
 	for x := 0; x < 9; x++ {
 		if p[x][j] == k {
 			return false
@@ -177,15 +99,13 @@ func (p *Puzzle) checkcol(i, j int, k uint8) bool {
 
 }
 
-func (p *Puzzle) checkbox(i, j int, k uint8) bool {
-
+// checkBox - given the 3x3 unit square i, j is a member of,
+// check if k is allowed within this unit square
+func (p *Puzzle) checkBox(i, j int, k uint8) bool {
 	minX := 3 * int((i)/3)
 	minY := 3 * int((j)/3)
-	maxX := minX + 3
-	maxY := minY + 3
-
-	for x := minX; x < maxX; x++ {
-		for y := minY; y < maxY; y++ {
+	for x := minX; x < minX+3; x++ {
+		for y := minY; y < minY+3; y++ {
 			if p[x][y] == k {
 				return false
 			}
@@ -194,10 +114,14 @@ func (p *Puzzle) checkbox(i, j int, k uint8) bool {
 	return true
 }
 
+// allowed - check that k is allowed as a potential solution, check the row,
+// column, and unit box for duplicates
 func (p *Puzzle) allowed(i, j int, k uint8) bool {
-	return p.checkrow(i, j, k) && p.checkcol(i, j, k) && p.checkbox(i, j, k)
+	return p.checkRow(i, k) && p.checkCol(j, k) && p.checkBox(i, j, k)
 }
 
+// isSolved - validate there are no 0s left in the puzzle, that means
+// everything is populated
 func (p *Puzzle) isSolved() bool {
 	for _, v := range p {
 		for _, vv := range v {
@@ -210,25 +134,36 @@ func (p *Puzzle) isSolved() bool {
 }
 
 // BacktrackSolve - solve using backtrack algorithm
-func (p *Puzzle) BacktrackSolve() bool {
+func (p *Puzzle) BacktrackSolve() error {
+	// iterating over the rows
 	for i, _ := range p {
+		// iterating over the columns
 		for j, _ := range p[i] {
+			// if this position is blank
 			if p[i][j] == 0 {
-				// to be filled in
+				// to be solved, start at k=1 to k=9
 				var k uint8 = 1
 				for ; k < 10; k++ {
+					// if k is allowed in this position
 					if p.allowed(i, j, k) {
+						// copy the puzzle value to a tmp puzzle
 						var tmp Puzzle = *p
+						// insert the value into the tmp puzzle loacation
 						tmp[i][j] = k
-						if tmp.isSolved() || tmp.BacktrackSolve() {
+						// recursively call backtrack with tmp puzzle,
+						// if solved, or nil error this is our solution
+						if err := tmp.BacktrackSolve(); tmp.isSolved() || err == nil {
+							// overwrite p with tmp, and pop stack
 							*p = tmp
-							return true
+							return nil
 						}
 					}
 				}
-				return false
+				// unfortunately nothing fit in this position
+				return ErrSolveNoSolution
 			}
 		}
 	}
-	return false
+	// should never get here.
+	return ErrSolveNoSolution
 }
