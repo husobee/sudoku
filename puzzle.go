@@ -3,20 +3,16 @@ package sudoku
 import (
 	"bufio"
 	"io"
-	"sync"
 )
 
 var (
 	maxRecursionDepth = -1
-	once              sync.Once
 )
 
 // SetRecursionDepth - set the maxium recursion depth for this solver
 // defaults to unlimited
 func SetRecursionDepth(d int) {
-	once.Do(func() {
-		maxRecursionDepth = d
-	})
+	maxRecursionDepth = d
 }
 
 // Puzzle - a sudoku puzzle structure
@@ -174,10 +170,14 @@ func (p *Puzzle) BacktrackSolve() error {
 						tmp.p[i][j] = k
 						// recursively call backtrack with tmp puzzle,
 						// if solved, or nil error this is our solution
-						if err := tmp.BacktrackSolve(); tmp.isSolved() || err == nil {
+						err := tmp.BacktrackSolve()
+						if tmp.isSolved() || err == nil {
 							// overwrite p with tmp, and pop stack
 							*p = tmp
 							return nil
+						}
+						if err == ErrSolveExceedRecursionDepth {
+							return err
 						}
 					}
 				}

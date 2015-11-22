@@ -110,8 +110,20 @@ func TestParsePuzzle(t *testing.T) {
 		t.Errorf("failed to error on a bad puzzle")
 	}
 }
+func TestSolvePuzzleRecursionDepth(t *testing.T) {
+	p, err := sudoku.ParsePuzzle(strings.NewReader(goodPuzzle))
+	if err != nil {
+		t.Errorf("failed to parse a good puzzle, err=%s", err.Error())
+	}
+	sudoku.SetRecursionDepth(10)
+	err = p.BacktrackSolve()
+	if err != sudoku.ErrSolveExceedRecursionDepth {
+		t.Errorf("should have errored due to recursion depth")
+	}
+}
 
 func TestSolvePuzzle(t *testing.T) {
+	sudoku.SetRecursionDepth(-1)
 	p, err := sudoku.ParsePuzzle(strings.NewReader(goodPuzzle))
 	if err != nil {
 		t.Errorf("failed to parse a good puzzle, err=%s", err.Error())
@@ -125,12 +137,14 @@ func TestSolvePuzzle(t *testing.T) {
 }
 
 func BenchmarkParsePuzzle(b *testing.B) {
+	sudoku.SetRecursionDepth(-1)
 	for i := 0; i < b.N; i++ {
 		sudoku.ParsePuzzle(strings.NewReader(goodPuzzle))
 	}
 }
 
 func BenchmarkSolvePuzzle(b *testing.B) {
+	sudoku.SetRecursionDepth(-1)
 	p, err := sudoku.ParsePuzzle(strings.NewReader(goodPuzzle))
 	if err != nil {
 		b.Error(err.Error())
