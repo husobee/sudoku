@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	maxRecursionDepth int = -1
+	maxRecursionDepth = -1
 	once              sync.Once
 )
 
@@ -68,7 +68,7 @@ func ParsePuzzle(reader io.Reader) (Puzzle, error) {
 			// since we have already validated the correctness
 			// of the puzzle input, we will skip to every other
 			// value from the line
-			var value uint8 = 0
+			var value uint8
 			if token[i] != underscore {
 				// if the value is not an underscore, set to
 				// the number value of the ascii token
@@ -157,18 +157,19 @@ func (p *Puzzle) BacktrackSolve() error {
 	}
 	p.recursionDepth++
 	// iterating over the rows
-	for i, _ := range p.p {
+	for i := range p.p {
 		// iterating over the columns
-		for j, _ := range p.p[i] {
+		for j := range p.p[i] {
 			// if this position is blank
 			if p.p[i][j] == 0 {
 				// to be solved, start at k=1 to k=9
 				var k uint8 = 1
 				for ; k < 10; k++ {
-					// if k is allowed in this position
+					// if k is allowed in this position, by checking row, column
+					// and unit box for representation already.
 					if p.allowed(i, j, k) {
 						// copy the puzzle value to a tmp puzzle
-						var tmp Puzzle = *p
+						tmp := *p
 						// insert the value into the tmp puzzle loacation
 						tmp.p[i][j] = k
 						// recursively call backtrack with tmp puzzle,
