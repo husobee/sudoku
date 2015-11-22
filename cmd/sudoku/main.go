@@ -1,13 +1,25 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 
 	"github.com/husobee/sudoku"
 )
 
+// command line recursion depth flag
+var recursionDepth int
+
+func init() {
+	// command line recursion depth flag, default to -1, or Unlimited
+	flag.IntVar(&recursionDepth, "r", -1, "set the recursion depth allowable to solve")
+	flag.Parse()
+}
+
 func main() {
+	// set the recursion depth allowable for our backtrack solving algorithm
+	sudoku.SetRecursionDepth(recursionDepth)
 	// take stdin and make a Puzzle
 	p, err := sudoku.ParsePuzzle(os.Stdin)
 	if err != nil {

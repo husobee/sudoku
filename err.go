@@ -15,4 +15,6 @@ var (
 	ErrSolveStuck = errors.New("stuck in backtrack")
 	// ErrSolveNoSolution - no solution to puzzle
 	ErrSolveNoSolution = errors.New("no solution")
+	// ErrSolveExceedRecursionDepth - no solution to puzzle, exceeded recursion depth
+	ErrSolveExceedRecursionDepth = errors.New("exceeded recursion depth")
 )

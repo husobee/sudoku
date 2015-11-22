@@ -3,14 +3,31 @@ package sudoku
 import (
 	"bufio"
 	"io"
+	"sync"
 )
 
+var (
+	maxRecursionDepth int = -1
+	once              sync.Once
+)
+
+// SetRecursionDepth - set the maxium recursion depth for this solver
+// defaults to unlimited
+func SetRecursionDepth(d int) {
+	once.Do(func() {
+		maxRecursionDepth = d
+	})
+}
+
 // Puzzle - a sudoku puzzle structure
-type Puzzle [9][9]uint8
+type Puzzle struct {
+	p              [9][9]uint8
+	recursionDepth int
+}
 
 // Dump - Dump the current state of the puzzle to a writer
 func (p *Puzzle) Dump(writer io.Writer) {
-	for _, v := range p {
+	for _, v := range p.p {
 		line := []byte{}
 		for i, vv := range v {
 			if i != 0 {
@@ -58,7 +75,7 @@ func ParsePuzzle(reader io.Reader) (Puzzle, error) {
 				value, _ = asciiToNumber(token[i])
 			}
 			// populate the value in the matrix
-			p[rowCount][posCount] = value
+			p.p[rowCount][posCount] = value
 			posCount++
 		}
 		rowCount++
@@ -81,7 +98,7 @@ func ParsePuzzle(reader io.Reader) (Puzzle, error) {
 // checkRow - Check that k isnt duplicated in the row i
 func (p *Puzzle) checkRow(i int, k uint8) bool {
 	for x := 0; x < 9; x++ {
-		if p[i][x] == k {
+		if p.p[i][x] == k {
 			return false
 		}
 	}
@@ -91,7 +108,7 @@ func (p *Puzzle) checkRow(i int, k uint8) bool {
 // checkCol - Check that k isnt duplicated in the column j
 func (p *Puzzle) checkCol(j int, k uint8) bool {
 	for x := 0; x < 9; x++ {
-		if p[x][j] == k {
+		if p.p[x][j] == k {
 			return false
 		}
 	}
@@ -106,7 +123,7 @@ func (p *Puzzle) checkBox(i, j int, k uint8) bool {
 	minY := 3 * int((j)/3)
 	for x := minX; x < minX+3; x++ {
 		for y := minY; y < minY+3; y++ {
-			if p[x][y] == k {
+			if p.p[x][y] == k {
 				return false
 			}
 		}
@@ -123,7 +140,7 @@ func (p *Puzzle) allowed(i, j int, k uint8) bool {
 // isSolved - validate there are no 0s left in the puzzle, that means
 // everything is populated
 func (p *Puzzle) isSolved() bool {
-	for _, v := range p {
+	for _, v := range p.p {
 		for _, vv := range v {
 			if vv == 0 {
 				return false
@@ -135,12 +152,16 @@ func (p *Puzzle) isSolved() bool {
 
 // BacktrackSolve - solve using backtrack algorithm
 func (p *Puzzle) BacktrackSolve() error {
+	if maxRecursionDepth != -1 && maxRecursionDepth < p.recursionDepth {
+		return ErrSolveExceedRecursionDepth
+	}
+	p.recursionDepth++
 	// iterating over the rows
-	for i, _ := range p {
+	for i, _ := range p.p {
 		// iterating over the columns
-		for j, _ := range p[i] {
+		for j, _ := range p.p[i] {
 			// if this position is blank
-			if p[i][j] == 0 {
+			if p.p[i][j] == 0 {
 				// to be solved, start at k=1 to k=9
 				var k uint8 = 1
 				for ; k < 10; k++ {
@@ -149,7 +170,7 @@ func (p *Puzzle) BacktrackSolve() error {
 						// copy the puzzle value to a tmp puzzle
 						var tmp Puzzle = *p
 						// insert the value into the tmp puzzle loacation
-						tmp[i][j] = k
+						tmp.p[i][j] = k
 						// recursively call backtrack with tmp puzzle,
 						// if solved, or nil error this is our solution
 						if err := tmp.BacktrackSolve(); tmp.isSolved() || err == nil {
