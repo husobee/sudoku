@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -13,5 +14,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Invalid Puzzle: %s", err.Error())
 	}
+	p.Dump(os.Stdout)
+	p.BacktrackSolve()
+	fmt.Println("\n\nfinal result:")
 	p.Dump(os.Stdout)
 }

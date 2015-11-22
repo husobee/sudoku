@@ -9,6 +9,17 @@ import (
 )
 
 const (
+	goodPuzzleSolve string = `1 2 3 4 5 6 7 8 9
+4 5 6 7 8 9 1 2 3
+7 8 9 1 2 3 4 5 6
+2 3 4 5 6 7 8 9 1
+5 6 7 8 9 1 2 3 4
+8 9 1 2 3 4 5 6 7
+3 4 5 6 7 8 9 1 2
+6 7 8 9 1 2 3 4 5
+9 1 2 3 4 5 6 7 8
+`
+
 	goodPuzzle string = `1 _ 3 _ _ 6 _ 8 _
 _ 5 _ _ 8 _ 1 2 _
 7 _ 9 1 _ 3 _ 5 6
@@ -101,9 +112,28 @@ func TestParsePuzzle(t *testing.T) {
 	}
 }
 
+func TestSolvePuzzle(t *testing.T) {
+	p, err := sudoku.ParsePuzzle(strings.NewReader(goodPuzzle))
+	if err != nil {
+		t.Errorf("failed to parse a good puzzle, err=%s", err.Error())
+	}
+	p.BacktrackSolve()
+	buf := bytes.NewBuffer([]byte{})
+	p.Dump(buf)
+	if buf.String() != goodPuzzleSolve {
+		t.Errorf("failed to solve puzzle correctly")
+	}
+}
+
 func BenchmarkParsePuzzle(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		sudoku.ParsePuzzle(strings.NewReader(goodPuzzle))
 	}
+}
 
+func BenchmarkSolvePuzzle(b *testing.B) {
+	p, _ := sudoku.ParsePuzzle(strings.NewReader(goodPuzzle))
+	for i := 0; i < b.N; i++ {
+		p.BacktrackSolve()
+	}
 }

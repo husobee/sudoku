@@ -21,6 +21,8 @@ var (
 	ErrInvalidCharacter  = errors.New("invalid character")
 	ErrInvalidLineLength = errors.New("invalid line length")
 	ErrInvalidRowCount   = errors.New("invalid number of rows")
+	ErrStuck             = errors.New("stuck in backtrack")
+	ErrNoSolution        = errors.New("no solution")
 )
 
 func isSpace(c byte) bool {
@@ -150,4 +152,83 @@ func ParsePuzzle(reader io.Reader) (Puzzle, error) {
 	}
 
 	return p, nil
+}
+
+var (
+	stuck          = false
+	recursionDepth = 30
+)
+
+func (p *Puzzle) checkrow(i, j int, k uint8) bool {
+	for x := 0; x < 9; x++ {
+		if p[i][x] == k {
+			return false
+		}
+	}
+	return true
+}
+func (p *Puzzle) checkcol(i, j int, k uint8) bool {
+	for x := 0; x < 9; x++ {
+		if p[x][j] == k {
+			return false
+		}
+	}
+	return true
+
+}
+
+func (p *Puzzle) checkbox(i, j int, k uint8) bool {
+
+	minX := 3 * int((i)/3)
+	minY := 3 * int((j)/3)
+	maxX := minX + 3
+	maxY := minY + 3
+
+	for x := minX; x < maxX; x++ {
+		for y := minY; y < maxY; y++ {
+			if p[x][y] == k {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (p *Puzzle) allowed(i, j int, k uint8) bool {
+	return p.checkrow(i, j, k) && p.checkcol(i, j, k) && p.checkbox(i, j, k)
+}
+
+func (p *Puzzle) isSolved() bool {
+	for _, v := range p {
+		for _, vv := range v {
+			if vv == 0 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// BacktrackSolve - solve using backtrack algorithm
+func (p *Puzzle) BacktrackSolve() bool {
+	for i, _ := range p {
+		for j, _ := range p[i] {
+			if p[i][j] == 0 {
+				// to be filled in
+				var k uint8 = 1
+				for ; k < 10; k++ {
+					if p.allowed(i, j, k) {
+						var tmp Puzzle = *p
+						tmp[i][j] = k
+						if tmp.isSolved() || tmp.BacktrackSolve() {
+							*p = tmp
+							return true
+						}
+					}
+				}
+				return false
+			}
+		}
+	}
+	return false
 }
